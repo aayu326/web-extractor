@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chatbot Data Extractor — Groq Powered</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #0f0f1a;
+    --surface2: #161625;
+    --border: #1e1e35;
+    --border2: #2a2a45;
+    --accent: #00d4ff;
+    --accent2: #ff6b6b;
+    --accent3: #00ff9d;
+    --accent4: #ffb800;
+    --text: #e2e2f0;
+    --muted: #6060a0;
+    --glow-cyan: rgba(0,212,255,0.12);
+    --glow-red: rgba(255,107,107,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated BG */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(0,212,255,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 80%, rgba(255,107,107,0.04) 0%, transparent 60%),
+      linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 20px 100px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--accent), #0080ff);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 30px rgba(0,212,255,0.3);
+  }
+  .logo-text {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 3px;
+    font-weight: 600;
+  }
+  .title {
+    font-size: clamp(36px, 7vw, 64px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 16px;
+    color: #fff;
+    letter-spacing: -2px;
+  }
+  .title span {
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+  }
+  .groq-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,157,0.08);
+    border: 1px solid rgba(0,255,157,0.2);
+    color: var(--accent3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .groq-dot {
+    width: 6px; height: 6px;
+    background: var(--accent3);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* API KEY INPUT */
+  .api-zone {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .api-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent4);
+    letter-spacing: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .api-input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .api-input:focus {
+    border-color: var(--accent4);
+    box-shadow: 0 0 0 3px rgba(255,184,0,0.08);
+  }
+  .api-input::placeholder { color: var(--muted); }
+  .api-hint {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+  .api-hint a { color: var(--accent4); text-decoration: none; }
+  .api-hint a:hover { text-decoration: underline; }
+
+  /* MAIN INPUT */
+  .input-zone {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .input-zone::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+  }
+  .input-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    display: block;
+  }
+  .url-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .url-input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .url-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--glow-cyan);
+  }
+  .url-input::placeholder { color: var(--muted); }
+
+  .btn-extract {
+    padding: 16px 32px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), #0080ff);
+    color: #000;
+    box-shadow: 0 4px 24px rgba(0,212,255,0.25);
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+  .btn-extract:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,212,255,0.4);
+  }
+  .btn-extract:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* LOADING */
+  .loading {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 48px 32px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .loading.show { display: block; }
+
+  .loader-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .bar {
+    width: 4px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: barwave 1s ease-in-out infinite;
+  }
+  .bar:nth-child(1) { height: 20px; animation-delay: 0s; }
+  .bar:nth-child(2) { height: 32px; animation-delay: 0.1s; }
+  .bar:nth-child(3) { height: 44px; animation-delay: 0.2s; background: var(--accent3); }
+  .bar:nth-child(4) { height: 32px; animation-delay: 0.3s; }
+  .bar:nth-child(5) { height: 20px; animation-delay: 0.4s; }
+  @keyframes barwave {
+    0%,100% { transform: scaleY(0.5); opacity: 0.4; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+
+  .loading-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .loading-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .steps-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 360px;
+    margin: 0 auto;
+    text-align: left;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+  }
+  .step.active {
+    color: var(--accent3);
+    background: rgba(0,255,157,0.05);
+    border-color: rgba(0,255,157,0.15);
+  }
+  .step.done {
+    color: var(--accent);
+    opacity: 0.6;
+  }
+  .step-icon { font-size: 14px; }
+
+  /* ERROR */
+  .error-box {
+    display: none;
+    background: rgba(255,107,107,0.06);
+    border: 1px solid rgba(255,107,107,0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: var(--accent2);
+    font-size: 13px;
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+  }
+  .error-box.show { display: block; }
+
+  /* RESULTS */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* SECTION */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .section-header:hover { background: var(--surface2); }
+  .section-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sec-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .ic-cyan { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.2); }
+  .ic-red { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); }
+  .ic-green { background: rgba(0,255,157,0.1); border: 1px solid rgba(0,255,157,0.2); }
+  .ic-gold { background: rgba(255,184,0,0.1); border: 1px solid rgba(255,184,0,0.2); }
+  .ic-pink { background: rgba(255,100,200,0.1); border: 1px solid rgba(255,100,200,0.2); }
+
+  .sec-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .sec-count {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 6px;
+  }
+  .chevron {
+    font-size: 10px;
+    color: var(--muted);
+    transition: transform 0.3s;
+  }
+  .chevron.open { transform: rotate(180deg); }
+  .collapsible {
+    overflow: hidden;
+    max-height: 3000px;
+    transition: max-height 0.4s ease;
+  }
+  .collapsible.closed { max-height: 0; }
+  .section-body { padding: 20px 22px; border-top: 1px solid var(--border); }
+
+  /* COMPANY CARD */
+  .company-card {
+    background: linear-gradient(135deg, rgba(0,212,255,0.04), rgba(0,255,157,0.04));
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .company-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+  }
+  .company-name {
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .company-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* BUTTONS */
+  .btn-sm {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* TAGS */
+  .tag-cloud { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tag {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    cursor: default;
+    transition: all 0.15s;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); background: var(--glow-cyan); }
+
+  /* LINKS */
+  .link-grid { display: flex; flex-direction: column; gap: 8px; }
+  .link-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 16px;
+    flex-wrap: wrap;
+    transition: border-color 0.2s;
+  }
+  .link-item:hover { border-color: var(--border2); }
+  .link-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 110px;
+    flex-shrink: 0;
+  }
+  .link-url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    flex: 1;
+    word-break: break-all;
+    text-decoration: none;
+  }
+  .link-url:hover { text-decoration: underline; }
+
+  /* QA */
+  .qa-list { display: flex; flex-direction: column; gap: 10px; }
+  .qa-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .qa-item:hover { border-color: var(--border2); }
+  .qa-q {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .qa-a {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .qa-kw {
+    padding: 8px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    border-top: 1px solid var(--border);
+  }
+  .qa-kw-tag {
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.15);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* TONE */
+  .tone-box {
+    background: linear-gradient(135deg, rgba(255,100,200,0.05), rgba(0,212,255,0.05));
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  /* CODE */
+  .code-wrap { position: relative; }
+  .code-block {
+    background: #060610;
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+    color: #a0c8ff;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .code-block::-webkit-scrollbar { width: 4px; height: 4px; }
+  .code-block::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .copy-abs {
+    position: absolute;
+    top: 10px; right: 10px;
+  }
+
+  /* CONTACT GRID */
+  .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .contact-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .contact-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .contact-val {
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-word;
+    font-weight: 600;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--accent3);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    margin-top: 64px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+  .footer-name { color: var(--accent); font-weight: 700; }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .url-row, .api-zone { flex-direction: column; }
+    .btn-extract { width: 100%; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">🤖</div>
+    </div>
+    <div class="logo-text" style="margin-bottom:20px;">CHATBOT DATA EXTRACTOR</div>
+    <h1 class="title">Extract. Analyze.<br><span>Deploy.</span></h1>
+    <p class="subtitle">Website URL paste kro→ keywords, Q&amp;A pairs, links, tone — chatbot ke liye sab ready ho jayega ( not 100% but 30-40 pair)</p>
+    <div class="groq-badge">
+      <div class="groq-dot"></div>
+      POWERED BY GROQ · LLAMA 3.3 70B · 100% FREE
+    </div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="api-zone">
+    <span class="api-label">🔑 GROQ KEY</span>
+    <input class="api-input" id="apiKey" type="password" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off"/>
+    <span class="api-hint">Free key: <a href="https://console.groq.com" target="_blank">console.groq.com</a></span>
+  </div>
+
+  <!-- URL INPUT -->
+  <div class="input-zone">
+    <span class="input-label">// WEBSITE URL ENTER KARO</span>
+    <div class="url-row">
+      <input class="url-input" id="urlInput" type="url" placeholder="https://example.com"/>
+      <button class="btn-extract" id="analyzeBtn" onclick="analyze()">🚀 Extract Data</button>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="loader-visual">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+    <div class="loading-title">Analyzing Website...</div>
+    <div class="loading-sub" id="loadingSub">Groq AI processing...</div>
+    <div class="steps-grid">
+      <div class="step" id="s1"><span class="step-icon">🌐</span>Fetching website content...</div>
+      <div class="step" id="s2"><span class="step-icon">🧠</span>Sending to Groq AI...</div>
+      <div class="step" id="s3"><span class="step-icon">🔍</span>Extracting keywords & links...</div>
+      <div class="step" id="s4"><span class="step-icon">💬</span>Generating Q&A pairs...</div>
+      <div class="step" id="s5"><span class="step-icon">📦</span>Building chatbot config...</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results"></div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p class="footer-text">CRAFTED WITH ❤️ BY <span class="footer-name">AAYUSH</span> — GROQ POWERED · CHATBOT EXTRACTOR v2.0</p>
+  </div>
+</div>
+
+<div class="toast" id="toast">✅ Copied!</div>
+
+<script>
+let currentData = {};
+
+function showToast(msg = "✅ Copied!") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast()).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast();
+  });
+}
+
+function toggleSection(id) {
+  const body = document.getElementById("body_" + id);
+  const chev = document.getElementById("chev_" + id);
+  body.classList.toggle("closed");
+  chev.classList.toggle("open");
+}
+
+function setStep(num) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById("s" + i);
+    if (i < num) el.className = "step done";
+    else if (i === num) el.className = "step active";
+    else el.className = "step";
+  }
+}
+
+function showError(msg) {
+  const eb = document.getElementById("errorBox");
+  eb.innerHTML = "❌ " + msg;
+  eb.classList.add("show");
+}
+
+async function fetchWebsite(url) {
+  // Try multiple CORS proxies
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  ];
+
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      if (data && data.contents) return data.contents;
+      // corsproxy returns text
+      const text = await res.text();
+      if (text && text.length > 100) return text;
+    } catch (e) {
+      continue;
+    }
+  }
+  throw new Error("Website fetch nahi ho paaya. CORS issue ya website down hai.");
+}
+
+function extractTextFromHTML(html) {
+  // Create a DOM parser to extract text
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Remove scripts, styles, nav noise
+  ['script','style','noscript','iframe'].forEach(tag => {
+    doc.querySelectorAll(tag).forEach(el => el.remove());
+  });
+
+  // Get meta info
+  const title = doc.querySelector('title')?.textContent || '';
+  const desc = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+  const keywords = doc.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
+
+  // Get all links
+  const links = [];
+  doc.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href');
+    const text = a.textContent.trim();
+    if (href && !href.startsWith('#') && !href.startsWith('javascript') && text) {
+      links.push({ text, href });
+    }
+  });
+
+  // Get main text content
+  const body = doc.body?.innerText || doc.body?.textContent || '';
+  const cleanText = body.replace(/\s+/g, ' ').trim().substring(0, 6000);
+
+  return { title, desc, keywords, links: links.slice(0, 50), text: cleanText };
+}
+
+async function callGroq(apiKey, prompt) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 6000,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: "You are a chatbot configuration expert. Always respond with valid JSON only. No markdown, no explanation, no code fences, just pure valid JSON. Escape all special characters in strings properly."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Groq API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+function robustJSONParse(text) {
+  // Step 1: Extract JSON block
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("No JSON found in response");
+  let raw = jsonMatch[0];
+
+  // Step 2: Try direct parse first
+  try { return JSON.parse(raw); } catch(e) {}
+
+  // Step 3: Fix bad escaped characters and unescaped newlines in string values
+  try {
+    // Replace literal newlines/tabs inside quoted strings
+    let fixed = raw.replace(/"((?:[^"\\]|\\.)*)"/g, (match, inner) => {
+      const cleaned = inner
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t");
+      return '"' + cleaned + '"';
+    });
+    return JSON.parse(fixed);
+  } catch(e) {}
+
+  // Step 4: Strip all control characters inside strings
+  try {
+    let fixed = raw.replace(/"((?:[^"\\]|\\.)*)"/g, (match, inner) => {
+      // Remove all real control characters
+      const cleaned = inner.replace(/[\x00-\x1F\x7F]/g, ' ');
+      return '"' + cleaned + '"';
+    });
+    return JSON.parse(fixed);
+  } catch(e) {}
+
+  // Step 5: Partial extraction fallback
+  const partial = {
+    company_name: "",
+    company_description: "",
+    tone: "",
+    keywords: [],
+    links: [],
+    contact: {},
+    social_media: [],
+    qa_pairs: []
+  };
+
+  // Extract simple string fields
+  ['company_name','company_description','tone'].forEach(f => {
+    const m = raw.match(new RegExp(`"${f}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+    if (m) partial[f] = m[1].replace(/\\n/g,' ').replace(/[\x00-\x1F]/g,' ');
+  });
+
+  // Extract keywords
+  const kwMatch = raw.match(/"keywords"\s*:\s*\[([\s\S]*?)\]/);
+  if (kwMatch) {
+    partial.keywords = (kwMatch[1].match(/"([^"]+)"/g) || []).map(s => s.replace(/"/g,''));
+  }
+
+  // Extract QA pairs one by one
+  const qaSection = raw.match(/"qa_pairs"\s*:\s*\[([\s\S]*?)(?:\]\s*[,}]|$)/);
+  if (qaSection) {
+    const items = qaSection[1].match(/\{[^{}]*\}/g) || [];
+    items.forEach(item => {
+      const q = item.match(/"question"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1];
+      const a = item.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1];
+      if (q) partial.qa_pairs.push({
+        question: q.replace(/[\x00-\x1F]/g,' '),
+        answer: (a||"").replace(/[\x00-\x1F]/g,' '),
+        keywords: []
+      });
+    });
+  }
+
+  if (partial.company_name || partial.qa_pairs.length > 0) return partial;
+
+  throw new Error("Response completely unparseable — dobara try karo");
+}
+
+async function analyze() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const url = document.getElementById("urlInput").value.trim();
+
+  if (!apiKey) { showError("Pehle Groq API key dalo bhai!"); return; }
+  if (!apiKey.startsWith("gsk_")) { showError("Groq API key 'gsk_' se start hoti hai. Check karo!"); return; }
+  if (!url) { showError("Website URL dalo!"); return; }
+  if (!url.startsWith("http")) { showError("URL https:// se start honi chahiye!"); return; }
+
+  // Reset UI
+  document.getElementById("errorBox").classList.remove("show");
+  document.getElementById("results").classList.remove("show");
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("loading").classList.add("show");
+  document.getElementById("analyzeBtn").disabled = true;
+  setStep(1);
+
+  try {
+    // Step 1: Fetch website
+    document.getElementById("loadingSub").textContent = "Website fetch ho rahi hai...";
+    setStep(1);
+    let siteData;
+    try {
+      const html = await fetchWebsite(url);
+      siteData = extractTextFromHTML(html);
+    } catch(e) {
+      // If fetch fails, still try with just the URL
+      siteData = {
+        title: url,
+        desc: '',
+        keywords: '',
+        links: [],
+        text: `Website URL: ${url}. Please analyze this website based on the URL and domain name.`
+      };
+    }
+
+    // Step 2: Prepare links info
+    setStep(2);
+    document.getElementById("loadingSub").textContent = "Groq AI ko bhej rahe hain...";
+
+    // Build absolute URLs from relative
+    const baseUrl = new URL(url).origin;
+    const resolvedLinks = siteData.links.map(l => {
+      let absUrl = l.href;
+      if (absUrl.startsWith('/')) absUrl = baseUrl + absUrl;
+      else if (!absUrl.startsWith('http')) absUrl = baseUrl + '/' + absUrl;
+      return { label: l.text, url: absUrl };
+    });
+
+    setStep(3);
+    document.getElementById("loadingSub").textContent = "Keywords & links extract ho rahe hain...";
+
+    const prompt = `Analyze this website data and return a complete chatbot configuration JSON.
+
+Website URL: ${url}
+Page Title: ${siteData.title}
+Meta Description: ${siteData.desc}
+Meta Keywords: ${siteData.keywords}
+
+Website Text Content (first 5000 chars):
+${siteData.text}
+
+Found Links on page:
+${resolvedLinks.slice(0,20).map(l => `- ${l.label}: ${l.url}`).join('\n')}
+
+Return ONLY a valid JSON object with this EXACT structure:
+{
+  "company_name": "Company/website name",
+  "company_description": "2-3 line description of what this company/website does",
+  "tone": "Describe brand tone in 2-3 sentences - is it formal/informal, technical/simple, friendly/corporate?",
+  "keywords": ["array", "of", "40+", "keywords", "users", "would", "type", "to", "find", "this", "chatbot"],
+  "links": [
+    {"label": "Page Name", "url": "https://full-url.com/page"}
+  ],
+  "contact": {
+    "phone": "phone number or null",
+    "email": "email address or null",
+    "address": "physical address or null",
+    "whatsapp": "whatsapp number or null"
+  },
+  "social_media": [
+    {"platform": "Platform Name", "url": "https://social-url"}
+  ],
+  "qa_pairs": [
+    {
+      "question": "Question a user would ask this chatbot",
+      "answer": "Detailed helpful answer based on website content",
+      "keywords": ["trigger", "words", "for", "this", "qa"]
+    }
+  ],
+  "chatbot_config": "const chatbotConfig = { companyName: '...', ... }; // ready to use JS config"
+}
+
+Rules:
+- keywords: minimum 40 words users would actually type
+- qa_pairs: minimum 15 pairs covering all website sections  
+- links: include ALL links found + any obvious pages (home, about, contact, services)
+- Make all URLs absolute with https://
+- chatbot_config should be a complete, copy-paste ready JavaScript config object
+- JSON must be valid - escape all quotes inside strings`;
+
+    setStep(4);
+    document.getElementById("loadingSub").textContent = "Q&A pairs generate ho rahe hain...";
+
+    const responseText = await callGroq(apiKey, prompt);
+
+    setStep(5);
+    document.getElementById("loadingSub").textContent = "Chatbot config build ho raha hai...";
+
+    // Parse JSON with robust fallback parser
+    let parsed;
+    try {
+      parsed = robustJSONParse(responseText);
+    } catch(e) {
+      throw new Error("Parse failed: " + e.message + ". Dobara try karo.");
+    }
+
+    // Merge with resolved links if AI didn't find many
+    if (!parsed.links || parsed.links.length < 3) {
+      parsed.links = [...(parsed.links || []), ...resolvedLinks.slice(0, 20)];
+    }
+
+    currentData = parsed;
+
+    await new Promise(r => setTimeout(r, 600));
+    document.getElementById("loading").classList.remove("show");
+    renderResults(parsed, url);
+
+  } catch(err) {
+    document.getElementById("loading").classList.remove("show");
+    showError(err.message);
+  }
+
+  document.getElementById("analyzeBtn").disabled = false;
+}
+
+function renderResults(d, sourceUrl) {
+  const container = document.getElementById("results");
+  container.innerHTML = "";
+
+  // Stats bar
+  container.innerHTML += `
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent);">${(d.keywords||[]).length}</div>
+        <div class="stat-label">KEYWORDS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent3);">${(d.qa_pairs||[]).length}</div>
+        <div class="stat-label">Q&A PAIRS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent2);">${(d.links||[]).length}</div>
+        <div class="stat-label">LINKS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--accent4);">${(d.social_media||[]).length}</div>
+        <div class="stat-label">SOCIAL</div>
+      </div>
+    </div>`;
+
+  // Company card
+  container.innerHTML += `
+    <div class="company-card">
+      <div class="company-name">🏢 ${esc(d.company_name || sourceUrl)}</div>
+      <div class="company-desc">${esc(d.company_description || "")}</div>
+    </div>`;
+
+  // TONE
+  addSection(container, "tone", "🎯", "ic-pink", "BRAND TONE & VOICE", `
+    <div class="tone-box">${esc(d.tone || "N/A")}</div>
+  `);
+
+  // KEYWORDS
+  const kwArr = d.keywords || [];
+  const kwHtml = kwArr.map(k => `<span class="tag">${esc(k)}</span>`).join("");
+  addSection(container, "kw", "🏷️", "ic-cyan", `KEYWORDS`, `
+    <div class="toolbar">
+      <span style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">${kwArr.length} keywords extracted</span>
+      <button class="btn-sm" onclick="copyText(${JSON.stringify(kwArr.join(', '))})">📋 Copy All</button>
+    </div>
+    <div class="tag-cloud">${kwHtml || "<span style='color:var(--muted);font-size:12px;'>No keywords found</span>"}</div>
+  `);
+
+  // LINKS
+  // Deduplicate links by URL
+  const seen = new Set();
+  const uniqueLinks = (d.links || []).filter(l => {
+    if (!l.url || seen.has(l.url)) return false;
+    seen.add(l.url);
+    return true;
+  });
+  const linksHtml = uniqueLinks.map(l => `
+    <div class="link-item">
+      <span class="link-label">${esc(l.label||"Page")}</span>
+      <a class="link-url" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>
+      <button class="btn-sm" onclick="copyText('${escJs(l.url)}')">📋</button>
+    </div>
+  `).join("");
+  addSection(container, "links", "🔗", "ic-green", `ALL LINKS`, `
+    <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">${uniqueLinks.length} pages found</span>
+      <button class="btn-sm" onclick="copyText(${JSON.stringify(uniqueLinks.map(l=>l.url).join('\n'))})">📋 Copy All URLs</button>
+    </div>
+    <div class="link-grid">${linksHtml || "<p style='color:var(--muted);font-size:12px;'>No links found</p>"}</div>
+  `);
+
+  // CONTACT & SOCIAL
+  const c = d.contact || {};
+  const contactItems = [
+    c.phone && { icon: "📞", type: "PHONE", val: c.phone },
+    c.email && { icon: "📧", type: "EMAIL", val: c.email },
+    c.address && { icon: "📍", type: "ADDRESS", val: c.address },
+    c.whatsapp && { icon: "💬", type: "WHATSAPP", val: c.whatsapp },
+    ...(d.social_media||[]).map(s => ({ icon: getSocialIcon(s.platform), type: s.platform.toUpperCase(), val: s.url, isLink: true }))
+  ].filter(Boolean);
+
+  const contactHtml = contactItems.length ? `
+    <div class="contact-grid">
+      ${contactItems.map(item => `
+        <div class="contact-item">
+          <div class="contact-icon">${item.icon}</div>
+          <div class="contact-info">
+            <div class="contact-type">${esc(item.type)}</div>
+            ${item.isLink
+              ? `<a href="${esc(item.val)}" target="_blank" class="contact-val" style="color:var(--accent);text-decoration:none;">${esc(item.val)}</a>`
+              : `<div class="contact-val">${esc(item.val)}</div>`}
+          </div>
+          <button class="btn-sm" onclick="copyText('${escJs(item.val)}')">📋</button>
+        </div>
+      `).join("")}
+    </div>
+  ` : "<p style='color:var(--muted);font-size:12px;font-family:\"JetBrains Mono\",monospace;'>No contact info found on this page</p>";
+  addSection(container, "contact", "📞", "ic-gold", "CONTACT & SOCIAL", contactHtml);
+
+  // Q&A PAIRS
+  const qaArr = d.qa_pairs || [];
+  const qaHtml = qaArr.map((qa, i) => `
+    <div class="qa-item">
+      <div class="qa-q">❓ ${esc(qa.question)}</div>
+      <div class="qa-a">${esc(qa.answer)}</div>
+      ${qa.keywords && qa.keywords.length ? `
+        <div class="qa-kw">
+          ${qa.keywords.map(k => `<span class="qa-kw-tag">${esc(k)}</span>`).join("")}
+        </div>` : ""}
+    </div>
+  `).join("");
+  addSection(container, "qa", "💬", "ic-red", `Q&A PAIRS`, `
+    <div class="toolbar">
+      <span style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">${qaArr.length} questions generated</span>
+      <button class="btn-sm" onclick="copyAllQA()">📋 Copy as JS Config</button>
+    </div>
+    <div class="qa-list">${qaHtml || "<p style='color:var(--muted);font-size:12px;'>No Q&A generated</p>"}</div>
+  `);
+
+  // CHATBOT JS CONFIG
+  const configText = d.chatbot_config || generateConfig(d);
+  addSection(container, "config", "⚙️", "ic-cyan", "READY-TO-USE CHATBOT CONFIG (JS)", `
+    <p style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">Copy karo aur apne chatbot mein paste karo</p>
+    <div class="code-wrap">
+      <button class="btn-sm copy-abs" onclick="copyText(document.getElementById('configCode').textContent)">📋 Copy All</button>
+      <pre class="code-block" id="configCode">${esc(configText)}</pre>
+    </div>
+  `);
+
+  // FULL JSON EXPORT
+  addSection(container, "json", "📥", "ic-green", "FULL JSON EXPORT", `
+    <div class="toolbar">
+      <span style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;">Complete extracted data as JSON</span>
+      <button class="btn-sm" onclick="copyText(document.getElementById('jsonCode').textContent)">📋 Copy JSON</button>
+    </div>
+    <div class="code-wrap">
+      <pre class="code-block" id="jsonCode">${esc(JSON.stringify(currentData, null, 2))}</pre>
+    </div>
+  `);
+
+  container.classList.add("show");
+  setTimeout(() => container.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+}
+
+function addSection(container, id, emoji, iconClass, title, bodyHtml) {
+  container.innerHTML += `
+    <div class="section">
+      <div class="section-header" onclick="toggleSection('${id}')">
+        <div class="section-left">
+          <div class="sec-icon ${iconClass}">${emoji}</div>
+          <span class="sec-title">${title}</span>
+        </div>
+        <span class="chevron open" id="chev_${id}">▼</span>
+      </div>
+      <div class="collapsible" id="body_${id}">
+        <div class="section-body">${bodyHtml}</div>
+      </div>
+    </div>`;
+}
+
+function getSocialIcon(platform) {
+  const p = (platform || "").toLowerCase();
+  if (p.includes("instagram")) return "📸";
+  if (p.includes("facebook")) return "👥";
+  if (p.includes("twitter") || p.includes("x.com")) return "🐦";
+  if (p.includes("linkedin")) return "💼";
+  if (p.includes("youtube")) return "▶️";
+  if (p.includes("whatsapp")) return "💬";
+  return "🌐";
+}
+
+function copyAllQA() {
+  const d = currentData;
+  let out = "const qa_config = [\n";
+  (d.qa_pairs || []).forEach((qa) => {
+    out += `  {\n`;
+    out += `    keywords: ${JSON.stringify(qa.keywords || [])},\n`;
+    out += `    question: ${JSON.stringify(qa.question)},\n`;
+    out += `    answer: ${JSON.stringify(qa.answer)}\n`;
+    out += `  },\n`;
+  });
+  out += "];";
+  copyText(out);
+}
+
+function generateConfig(d) {
+  let cfg = `const chatbotConfig = {\n\n`;
+  cfg += `  company: ${JSON.stringify(d.company_name || "")},\n`;
+  cfg += `  description: ${JSON.stringify(d.company_description || "")},\n`;
+  cfg += `  tone: ${JSON.stringify(d.tone || "")},\n\n`;
+  cfg += `  keywords: ${JSON.stringify(d.keywords || [], null, 4)},\n\n`;
+  cfg += `  qa: [\n`;
+  (d.qa_pairs || []).forEach(qa => {
+    cfg += `    {\n`;
+    cfg += `      keywords: ${JSON.stringify(qa.keywords || [])},\n`;
+    cfg += `      question: ${JSON.stringify(qa.question)},\n`;
+    cfg += `      answer: ${JSON.stringify(qa.answer)}\n`;
+    cfg += `    },\n`;
+  });
+  cfg += `  ],\n\n`;
+  cfg += `  links: ${JSON.stringify(d.links || [], null, 4)},\n\n`;
+  cfg += `  contact: ${JSON.stringify(d.contact || {}, null, 4)},\n\n`;
+  cfg += `  social: ${JSON.stringify(d.social_media || [], null, 4)}\n\n`;
+  cfg += `};\n\nexport default chatbotConfig;`;
+  return cfg;
+}
+
+function esc(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+function escJs(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/\\/g,"\\\\")
+    .replace(/'/g,"\\'")
+    .replace(/\n/g,"\\n");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("urlInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") analyze();
+  });
+});
+</script>
+</body>
+</html>
